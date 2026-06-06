@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="SignSpeak AI translates simple hand signs into text and voice using your camera, MediaPipe Hands, and the Web Speech API."
+    />
+    <title>SignSpeak AI | Real-time sign to text and voice</title>
+    <link rel="preload" href="assets/signspeak-hero.png" as="image" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#live-detection">Skip to live sign detection</a>
+
+    <header class="site-header" aria-label="Main navigation">
+      <a class="brand" href="#home" aria-label="SignSpeak AI home">
+        <span class="brand-mark" aria-hidden="true">SS</span>
+        <span>SignSpeak AI</span>
+      </a>
+      <nav class="nav-links" aria-label="Page sections">
+        <a href="#live-detection">Detect</a>
+        <a href="#practice">Practice</a>
+        <a href="#custom-signs">Responses</a>
+        <a href="#public-intelligence">Register</a>
+        <a href="#library">Signs</a>
+        <a href="#about">About</a>
+        <a href="#feedback">Feedback</a>
+      </nav>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">
+        Dark mode
+      </button>
+    </header>
+
+    <main>
+      <section class="hero" id="home" aria-labelledby="heroTitle">
+        <img
+          class="hero-media"
+          src="assets/signspeak-hero.png"
+          alt="Person using hand signs with a laptop camera for assistive communication."
+        />
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Private, real-time assistive communication</p>
+          <h1 id="heroTitle">SignSpeak AI</h1>
+          <p class="hero-copy">
+            Translate simple hand signs into text and voice so people who cannot rely on speech
+            can be heard with dignity, speed, and care. Add personal responses for the signs your
+            family, classroom, or care team uses every day.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button primary" href="#live-detection">Start detecting</a>
+            <a class="button secondary" href="#practice">Practice signs</a>
+            <a class="button secondary" href="#public-intelligence">Register a sign</a>
+          </div>
+          <ul class="hero-points" aria-label="Key promises">
+            <li>Camera feed stays on your device</li>
+            <li>Personal sign responses</li>
+            <li>Large, readable controls</li>
+            <li>Desktop and mobile ready</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="privacy-band" aria-label="Privacy message">
+        <div>
+          <strong>Your camera feed stays on your device.</strong>
+          <span>No video is uploaded, recorded, or stored by this page.</span>
+        </div>
+      </section>
+
+      <section class="section live-section" id="live-detection" aria-labelledby="liveTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Live Sign Detection</p>
+          <h2 id="liveTitle">Show your hand sign in front of the camera.</h2>
+          <p>
+            Start the camera, keep your hand visible, and SignSpeak AI will translate the
+            recognized sign into a response. Use Speak to read the response aloud.
+          </p>
+        </div>
+
+        <div class="detector-grid">
+          <section class="camera-panel" aria-labelledby="cameraTitle">
+            <div class="panel-heading">
+              <h3 id="cameraTitle">Camera Preview</h3>
+              <span class="status-pill" id="modelStatus">Loading hand model</span>
+            </div>
+
+            <div class="video-stage">
+              <video id="cameraPreview" autoplay muted playsinline></video>
+              <canvas id="landmarkCanvas" aria-hidden="true"></canvas>
+              <div class="empty-state" id="cameraEmptyState">
+                <strong>Camera is off</strong>
+                <span>Press Start Camera when you are ready.</span>
+              </div>
+            </div>
+
+            <div class="control-row">
+              <button class="button primary" id="startCamera" type="button">Start Camera</button>
+              <button class="button danger" id="stopCamera" type="button" disabled>Stop Camera</button>
+            </div>
+            <p class="status-text" id="cameraStatus" role="status" aria-live="polite">
+              Camera is off.
+            </p>
+          </section>
+
+          <aside class="translation-panel" aria-labelledby="translationTitle">
+            <div class="panel-heading">
+              <h3 id="translationTitle">Translation</h3>
+              <span class="status-pill soft" id="trackingStatus">Waiting</span>
+            </div>
+
+            <div class="detected-box">
+              <span class="label">Detected sign</span>
+              <output id="detectedText" aria-live="polite">Waiting for sign...</output>
+              <span id="sourceShapeText">Hand shape will appear here.</span>
+              <span id="confidenceText">Confidence will appear here.</span>
+            </div>
+
+            <div class="response-box">
+              <span class="label">Response to speak</span>
+              <output id="responseText" aria-live="polite">Response will appear here.</output>
+            </div>
+
+            <div class="voice-controls">
+              <button class="button primary" id="speakButton" type="button" disabled>Speak</button>
+              <label class="switch">
+                <input id="autoSpeak" type="checkbox" />
+                <span>Auto-speak detected signs</span>
+              </label>
+            </div>
+
+            <div class="helper-note">
+              <strong>Beginner-friendly prototype</strong>
+              <span>
+                This browser demo recognizes a starter set of clear hand shapes and lets you map
+                them to personal responses. Full sign-language interpretation needs a trained
+                language model and broader testing.
+              </span>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section practice-section" id="practice" aria-labelledby="practiceTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Practice Mode</p>
+          <h2 id="practiceTitle">Choose a sign, then show it to the camera.</h2>
+          <p>
+            Practice at your own pace. The result updates when the camera sees a matching hand
+            shape from the detectable starter set.
+          </p>
+        </div>
+
+        <div class="practice-layout">
+          <div class="practice-picker" id="practicePicker" aria-label="Practice signs"></div>
+
+          <div class="practice-result" aria-live="polite">
+            <span class="label">Selected sign</span>
+            <strong id="selectedPractice">Hello</strong>
+            <p id="practiceResult">Start the camera and show Hello.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section custom-section" id="custom-signs" aria-labelledby="customTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Update Sign Responses</p>
+          <h2 id="customTitle">Make the signs speak the words your user needs.</h2>
+          <p>
+            Choose one detectable hand shape, give it a personal sign name, and add the response
+            that should be shown and spoken. Settings stay in this browser only.
+          </p>
+        </div>
+
+        <div class="custom-layout">
+          <form class="custom-form" id="customSignForm">
+            <label>
+              Detectable hand shape
+              <select id="detectedShapeSelect" name="sourceSign"></select>
+            </label>
+            <label>
+              Sign name
+              <input
+                id="customSignName"
+                name="signName"
+                type="text"
+                placeholder="Example: Need medicine"
+                required
+              />
+            </label>
+            <label class="full-span">
+              Response to show and speak
+              <textarea
+                id="customSignResponse"
+                name="response"
+                rows="4"
+                placeholder="Example: I need my medicine, please."
+                required
+              ></textarea>
+            </label>
+            <button class="button primary" type="submit">Save Sign Response</button>
+            <p class="status-text" id="customSignStatus" role="status" aria-live="polite"></p>
+          </form>
+
+          <aside class="custom-list-panel" aria-labelledby="customListTitle">
+            <h3 id="customListTitle">Personal responses</h3>
+            <div class="custom-sign-list" id="customSignList" aria-live="polite"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section library-section" id="library" aria-labelledby="libraryTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Common Signs Library</p>
+          <h2 id="libraryTitle">A wider library of signs and response ideas.</h2>
+          <p>
+            Detectable signs work now with the browser hand tracker. Library responses show the
+            larger set to support when a trained sign-language model is connected.
+          </p>
+        </div>
+
+        <div class="sign-grid" id="signLibrary" aria-label="Common signs"></div>
+      </section>
+
+      <section
+        class="section intelligence-section"
+        id="public-intelligence"
+        aria-labelledby="intelligenceTitle"
+      >
+        <div class="section-heading">
+          <p class="eyebrow">Public Sign Intelligence</p>
+          <h2 id="intelligenceTitle">Register a sign that is not available yet.</h2>
+          <p>
+            Anyone can suggest a missing sign, explain what it means, and send it to the SignSpeak
+            AI team for review. Suggestions are saved in this browser and prepared as an email to
+            moin26795@gmail.com.
+          </p>
+        </div>
+
+        <div class="intelligence-layout">
+          <form class="intelligence-form" id="publicSignForm" novalidate>
+            <label>
+              Your name
+              <input
+                id="publicNameInput"
+                name="publicName"
+                type="text"
+                autocomplete="name"
+                placeholder="Your name"
+              />
+            </label>
+            <label>
+              Your email
+              <input
+                id="publicEmailInput"
+                name="publicEmail"
+                type="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+              />
+            </label>
+            <label>
+              Sign name
+              <input
+                id="publicSignName"
+                name="publicSignName"
+                type="text"
+                placeholder="Example: I need charger"
+                required
+              />
+            </label>
+            <label>
+              Category
+              <select id="publicSignCategory" name="publicSignCategory">
+                <option>Need</option>
+                <option>Health</option>
+                <option>Safety</option>
+                <option>Feeling</option>
+                <option>Family</option>
+                <option>School</option>
+                <option>Work</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label class="full-span">
+              Meaning / response
+              <textarea
+                id="publicSignMeaning"
+                name="publicSignMeaning"
+                rows="3"
+                placeholder="Example: I need my phone charger, please."
+                required
+              ></textarea>
+            </label>
+            <label class="full-span">
+              How to show the sign
+              <textarea
+                id="publicSignDescription"
+                name="publicSignDescription"
+                rows="4"
+                placeholder="Describe the hand shape, movement, and where the hand is placed."
+                required
+              ></textarea>
+            </label>
+            <p class="email-note full-span">
+              Submitting opens your email app with the sign details addressed to
+              moin26795@gmail.com. Press Send in your email app to complete delivery.
+            </p>
+            <button class="button primary" type="submit">Register Sign</button>
+            <p class="status-text" id="publicSignStatus" role="status" aria-live="polite"></p>
+          </form>
+
+          <aside class="community-panel" aria-labelledby="communityTitle">
+            <h3 id="communityTitle">Submitted sign ideas</h3>
+            <p>
+              These ideas are stored locally on this device so the user can track what they have
+              registered.
+            </p>
+            <div class="community-list" id="communitySignList" aria-live="polite"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section about-section" id="about" aria-labelledby="aboutTitle">
+        <div class="about-grid">
+          <div>
+            <p class="eyebrow">About</p>
+            <h2 id="aboutTitle">Built for people who need another way to speak.</h2>
+          </div>
+          <div class="about-copy">
+            <p>
+              SignSpeak AI is designed for people who cannot speak, have speech difficulties from
+              birth, or communicate more comfortably through hand signs. It keeps the interface
+              calm, direct, and forgiving so the technology feels supportive instead of demanding.
+            </p>
+            <p>
+              The camera is used only in your browser to find hand landmarks. The detected sign can
+              be shown as large text, mapped to a personal response, and spoken aloud through the
+              Web Speech API.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section feedback-section" id="feedback" aria-labelledby="feedbackTitle">
+        <div class="section-heading">
+          <p class="eyebrow">Contact / Feedback</p>
+          <h2 id="feedbackTitle">Help make SignSpeak AI kinder and easier to use.</h2>
+          <p>
+            Share an accessibility idea, a sign request, or a note about what would make this more
+            useful. The form opens an email draft to moin26795@gmail.com.
+          </p>
+        </div>
+
+        <form class="feedback-form" id="feedbackForm" novalidate>
+          <label>
+            Name
+            <input id="nameInput" name="name" type="text" autocomplete="name" placeholder="Your name" />
+          </label>
+          <label>
+            Email
+            <input
+              id="emailInput"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+            />
+          </label>
+          <label class="full-span">
+            Message
+            <textarea
+              id="messageInput"
+              name="message"
+              rows="5"
+              placeholder="What should SignSpeak AI improve next?"
+              required
+            ></textarea>
+          </label>
+          <button class="button primary" type="submit">Send Feedback</button>
+          <p class="status-text" id="feedbackStatus" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>SignSpeak AI</span>
+      <span>Built by moinuddin | Team ILM Tech</span>
+    </footer>
+  </body>
+</html>
